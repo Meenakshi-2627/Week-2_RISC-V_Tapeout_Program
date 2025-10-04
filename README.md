@@ -7,14 +7,16 @@ This documentation covers the **hands-on functional modeling of BabySoC**, focus
 ## 📑 Table of Contents
 
 1. [Cloning the VSDBabySoC Repository](#1-cloning-the-vsdbabysoc-repository)
-2. [Pre-synthesis Simulation of VSDBabySoC](#3-pre-synthesis-simulation-of-babysoc)
-3. [RTL_simulation_modules](#2-rtl-simulation-modules)
-4. [Post-synthesis Simulation of VSDBabySoC](#3-post-synthesis-simulation-of-vsdbabysoc)
-5. [Summary](#5-summary)
+2. [Pre-Synthesis Simulation of BabySoC](#2pre-synthesis-simulation-of-babysoc)
+3. [RTL Simulation Modules](#3rtl-simulation-modules)
+4. [Simulating rvmythv--avsddacv--avsdpllv](#4simulating-rvmythv--avsddacv--avsdpllv)
+5. [Post-Synthesis Simulation of BabySoC](#5post-synthesis-simulation-of-babysoc)
+6. [Comparison](#6comparison)
+7. [Summary](#7-summary)
 
 ---
 
-## 1. Cloning the VSDBabySoC Repository
+# 1. Cloning the VSDBabySoC Repository
 
 ```bash
 cd ~/home/meena/VLSI    #Navigate to the folder where you want to store your project
@@ -52,17 +54,13 @@ gtkwave pre_synth_sim.vcd
 
 ![pre_synth_sim_wave](./Images/pre_synth_sim_wave.png)
 
-In this picture we can see the following signals:
-
-**CLK**: This is the input CLK signal of the RVMYTH core. This signal comes from the PLL, originally.
-
-**reset**: This is the input reset signal of the RVMYTH core. This signal comes from an external source, originally.
-
-**OUT**: This is the output OUT signal of the VSDBabySoC module. This signal comes from the DAC (due to simulation restrictions it behaves like a digital signal which is incorrect), originally.
-
-**RV_TO_DAC[9:0]**: This is the 10-bit output [9:0] OUT port of the RVMYTH core. This port comes from the RVMYTH register #17, originally.
-
-**OUT**: This is a real datatype wire which can simulate analog values. It is the output wire real OUT signal of the DAC module. This signal comes from the DAC, originally.
+| **Signal** | **Direction** | **Source** | **Description** |
+|-------------|---------------|-------------|-----------------|
+| **CLK** | Input | PLL | Clock input to the RVMYTH core. Comes from the PLL. |
+| **reset** | Input | External | Reset input to the RVMYTH core. Comes from an external source. |
+| **RV_TO_DAC[9:0]** | Output | RVMYTH Register #17 | 10-bit output from RVMYTH that connects to the DAC. |
+| **OUT (digital)** | Output | VSDBabySoC | Output of the VSDBabySoC module. Comes from DAC but behaves digitally in simulation. |
+| **OUT (real)** | Wire (real) | DAC | Real-type wire representing the analog output of the DAC in simulation. |
 
 >**NOTE**
 >
@@ -73,7 +71,7 @@ In this picture we can see the following signals:
 
 ---
 
-## 3.RTL Simulation Modules
+# 3.RTL Simulation Modules
 
 ### File structure
 
@@ -194,7 +192,7 @@ The testbench:
 
 ---
 
-# Simulating `rvmyth.v` , `avsddac.v` , `avsdpll.v`
+# 4.Simulating `rvmyth.v` , `avsddac.v` , `avsdpll.v`
 
 ## rvmyth.v
 
@@ -249,8 +247,8 @@ iverilog -o /home/meena/VLSI/VSDBabySoC/output/rvmyth/rvmyth.out -DPRE_SYNTH_SIM
 -I /home/meena/VLSI/VSDBabySoC/src/include -I /home/meena/VLSI/VSDBabySoC/src/module \
 /home/meena/VLSI/VSDBabySoC/src/module/clk_gate.v \
 /home/meena/VLSI/VSDBabySoC/src/module/rvmyth.v \
-/home/meena/VLSI/VSDBabySoC/src/module/tb_rvmyth.v
-vvp /home/meena/VLSI/VSDBabySoC/output/rvmyth/rvmyth.out
+/home/meena/VLSI/VSDBabySoC/src/module/tb_rvmyth.v         #Simulation
+vvp /home/meena/VLSI/VSDBabySoC/output/rvmyth/rvmyth.out     #Generating vcd file for output
 ```
 
 **Waveform**
@@ -435,7 +433,7 @@ vvp /home/meena/VLSI/VSDBabySoC/output/avsdpll/avsdpll.out
 
 ---
 
-## 4.Post-Synthesis Simulation of BabySoC
+# 5.Post-Synthesis Simulation of BabySoC
 
 Thes files need to be present in the working directory of `yosys` in order to ensure error free synthesis. This is done using the following commands,
 
@@ -451,6 +449,7 @@ Now inside the `../VSDBabySoC` folder, run `yosys`.
 ```bash
 yosys
 ```
+![vsdbabysoc](./Images/vsdbabysoc.png)
 
 In `yosys`, perform the following commands to read the required verilog files.
 
@@ -514,93 +513,6 @@ Then finally write the netlist using,
 write_verilog -noattr ~/Documents/Verilog/Labs/vsdbabysoc_synth.v
 ```
 
-
-**LOG:**
-=== clk_gate ===
-
-   Number of wires:                  5
-   Number of wire bits:              5
-   Number of public wires:           5
-   Number of public wire bits:       5
-   Number of memories:               0
-   Number of memory bits:            0
-   Number of processes:              0
-   Number of cells:                  0
-
-=== rvmyth ===
-
-   Number of wires:               4663
-   Number of wire bits:           8290
-   Number of public wires:         267
-   Number of public wire bits:    3894
-   Number of memories:               0
-   Number of memory bits:            0
-   Number of processes:              0
-   Number of cells:               6849
-     $_ANDNOT_                    1180
-     $_AND_                         59
-     $_AOI3_                       104
-     $_AOI4_                       153
-     $_DFF_P_                     1273
-     $_MUX_                       1456
-     $_NAND_                        84
-     $_NOR_                         92
-     $_NOT_                        964
-     $_OAI3_                       168
-     $_OAI4_                       387
-     $_ORNOT_                       62
-     $_OR_                         666
-     $_XNOR_                        80
-     $_XOR_                        114
-     clk_gate                        7
-
-=== vsdbabysoc ===
-
-   Number of wires:                  9
-   Number of wire bits:             18
-   Number of public wires:           9
-   Number of public wire bits:      18
-   Number of memories:               0
-   Number of memory bits:            0
-   Number of processes:              0
-   Number of cells:                  3
-     avsddac                         1
-     avsdpll                         1
-     rvmyth                          1
-
-=== design hierarchy ===
-
-   vsdbabysoc                        1
-     rvmyth                          1
-       clk_gate                      7
-
-   Number of wires:               4707
-   Number of wire bits:           8343
-   Number of public wires:         311
-   Number of public wire bits:    3947
-   Number of memories:               0
-   Number of memory bits:            0
-   Number of processes:              0
-   Number of cells:               6844
-     $_ANDNOT_                    1180
-     $_AND_                         59
-     $_AOI3_                       104
-     $_AOI4_                       153
-     $_DFF_P_                     1273
-     $_MUX_                       1456
-     $_NAND_                        84
-     $_NOR_                         92
-     $_NOT_                        964
-     $_OAI3_                       168
-     $_OAI4_                       387
-     $_ORNOT_                       62
-     $_OR_                         666
-     $_XNOR_                        80
-     $_XOR_                        114
-     avsddac                         1
-     avsdpll                         1
-```
-
 Compilation of the netlist with the testbench must be done, of course through `iverilog` using the following command,
 
 ```bash
@@ -619,11 +531,11 @@ Then, to view the waveform,
 vvp vsdbabysoc_synth.vvp
 gtkwave post_synth_sim.vcd 
 ```
-![post_synth_sim_wave](./Images/post_synth_wave.png)
+![post_synth_sim_wave](./Images/post_synth_sim_wave.png)
 
 ---
 
-## 5.Comparison
+## 6.Comparison
 
 ![comparison](./Images/comparison.png)
 
@@ -631,7 +543,7 @@ gtkwave post_synth_sim.vcd
 
 ---
 
-## 5. Summary
+## 7. Summary
 
 * BabySoC integrates a **RISC-V CPU, PLL, and DAC**.
 * Functional simulation validates design before synthesis.
