@@ -4,13 +4,13 @@ This documentation covers the **hands-on functional modeling of BabySoC**, focus
 
 ---
 
-|📑 Table of Contents|
-|-------------|
-|1. [Cloning the VSDBabySoC Repository](#1-cloning-the-vsdbabysoc-repository)|
-|2. [Analysing the Contents of VSDBabySoC](#2-analysing-the-contents-of-vsdbabysoc)|
-|3. [Pre-synthesis Simulation of VSDBabySoC](#3-pre-synthesis-simulation-of-vsdbabysoc)|
-|4. [Signal Analysis](#4-signal-analysis)|
-|5. [Summary](#5-summary)|
+## 📑 Table of Contents
+
+1. [Cloning the VSDBabySoC Repository](#1-cloning-the-vsdbabysoc-repository)
+2. [Pre-synthesis Simulation of VSDBabySoC](#3-pre-synthesis-simulation-of-babysoc)
+3. [RTL_simulation_modules](#2-rtl-simulation-modules)
+4. [Post-synthesis Simulation of VSDBabySoC](#3-post-synthesis-simulation-of-vsdbabysoc)
+5. [Summary](#5-summary)
 
 ---
 
@@ -31,7 +31,49 @@ ls    #Check its contents
 
 ---
 
-## 2. Analysing the Contents of VSDBabySoC
+## 2.Pre-Synthesis Simulation of BabySoC
+
+### Compile design with Icarus Verilog
+
+```bash
+mkdir -p output/pre_synth_sim    #Make a directory output to store the simulation files
+iverilog -o /home/meena/VLSI/VSDBabySoC/output/pre_synth_sim/pre_synth_sim.out -DPRE_SYNTH_SIM -I /home/meena/VLSI/VSDBabySoC/src/include -I /home/meena/VLSI/VSDBabySoC/src/module /home/meena/VLSI/VSDBabySoC/src/module/testbench.v
+
+```
+
+### Run simulation & view waveforms
+
+```bash
+vvp /home/meena/VLSI/VSDBabySoC/output/pre_synth_sim/pre_synth_sim.out
+gtkwave pre_synth_sim.vcd
+```
+
+**Waveform:**
+
+![pre_synth_sim_wave](./Images/pre_synth_sim_wave.png)
+
+In this picture we can see the following signals:
+
+**CLK**: This is the input CLK signal of the RVMYTH core. This signal comes from the PLL, originally.
+
+**reset**: This is the input reset signal of the RVMYTH core. This signal comes from an external source, originally.
+
+**OUT**: This is the output OUT signal of the VSDBabySoC module. This signal comes from the DAC (due to simulation restrictions it behaves like a digital signal which is incorrect), originally.
+
+**RV_TO_DAC[9:0]**: This is the 10-bit output [9:0] OUT port of the RVMYTH core. This port comes from the RVMYTH register #17, originally.
+
+**OUT**: This is a real datatype wire which can simulate analog values. It is the output wire real OUT signal of the DAC module. This signal comes from the DAC, originally.
+
+>**NOTE**
+>
+>To view the output waveform in analog , right click `OUT`-> `Data format` -> `Analog` -> `Step`
+
+**Reference**  
+![pre_synth_sim_wave1](./Images/pre_synth_sim_wave1.png)
+
+---
+
+## 3.RTL Simulation Modules
 
 ### File structure
 
@@ -65,29 +107,81 @@ VSDBabySoC/
 
 ### 📂 Verilog Source Files (`*.v`)
 
-| File           | Description                                                                      |
-| -------------- | -------------------------------------------------------------------------------- |
-| `avsddac.v`    | Implements the **DAC module**, converting 10-bit digital input to analog output. |
-| `avsdpll.v`    | Implements the **PLL module**, generating a stable clock.                        |
-| `rvmyth.tlv`   | TL-Verilog description of a **RISC-V CPU core**.                                 |
-| `vsdbabysoc.v` | **Top-level integration**, connecting CPU, PLL, and DAC.                         |
+<details>
+<summary><strong>➡️ Example: DAC Module (`avsddac.v`)</strong></summary>
 
-#### Example: DAC Implementation (`avsddac.v`)
+**Description:**  
+Converts the **10-bit digital signal** from the RISC-V core into an analog output.
+
 
 ![avsddac](./Images/avsddac.png)
 
----
+**Inputs:**
+- `D` — 10-bit digital input from processor  
+- `VREFH` — Reference voltage  
 
-#### Example: PLL Implementation (`avsdpll.v`)
+**Outputs:**
+- `OUT` — Analog output  
+
+</details>
+
+<details>
+<summary><strong>➡️ Example: PLL Module (`avsdpll.v`)</strong></summary>
+
+**Description:**  
+Generates a **stable clock** for synchronizing the RISC-V core and DAC.
 
 ![avsdpll](./Images/avsdpll.png)
 
----
+**Inputs:**
+- `VCO_IN`, `ENb_CP`, `ENb_VCO`, `REF` — PLL control & reference signals  
 
-#### Example: Top-Level Integration (`vsdbabysoc.v`)
+**Outputs:**
+- `CLK` — Stable clock output  
 
-![vsdbabysoc](./Images/vsdbabysoc.png)
+</details>
 
+<details>
+<summary><strong>➡️ Example: RISC-V Core (`rvmyth.v`)</strong></summary>
+
+##### 🧩 TL-Verilog to Verilog Conversion 
+
+**Install dependencies**
+
+```bash
+sudo apt install python3-venv python3-pip
+python3 -m venv sp_env
+source sp_env/bin/activate
+pip3 install pyyaml click sandpiper-saas
+```
+
+>-**Ensure sp_env is activated**
+>
+>-source sp_env/bin/activate #To activate
+>
+>-deactivate #To deactivate
+
+**Convert TL-Verilog → Verilog**
+
+```bash
+sandpiper-saas -i ./src/module/*.tlv -o rvmyth.v --bestsv --noline -p verilog --outdir ./src/module/
+```   
+![conversion](./Images/conversion.png)
+
+✅ Produces `rvmyth.v` and `rvmyth_gen.v`.
+
+**Description:**  
+Implements a **simple RISC-V processor** that produces a 10-bit digital signal for DAC conversion.
+
+![rvmyth](./Images/rvmyth.png)
+
+**Inputs:**
+- `CLK` — Clock input from PLL  
+- `reset` — Processor reset  
+
+**Outputs:**
+- `OUT` — 10-bit digital signal to DAC  
+</details>
 ---
 
 ### 📂 Testbench (`testbench.v`)
@@ -100,97 +194,442 @@ The testbench:
 
 ---
 
-## 3. Pre-synthesis Simulation of VSDBabySoC(rvmyth.tlv)
+# Simulating `rvmyth.v` , `avsddac.v` , `avsdpll.v`
 
-### Install dependencies
+## rvmyth.v
 
-```bash
-sudo apt install python3-venv python3-pip
-python3 -m venv sp_env
-source sp_env/bin/activate
-pip3 install pyyaml click sandpiper-saas
+**Testbench**
+Make a new file in `/src/module` named `tb_rvmyth.v`
+
+> Follow these steps:
+>
+> ```bash
+> vim tb_rvmyth.v
+> # press i to get into insert mode
+> # paste the code and click 'Enter'
+> :wq  # to write and save
+> ```
+
+**Testbench Code:**
+```
+`timescale 1ns / 1ps
+
+module tb_rvmyth;
+	// Inputs
+	reg clk, reset;
+	// Outputs
+	wire [9:0] out;
+
+        // Instantiate the Unit Under Test (UUT)
+	rvmyth uut (
+		.CLK(clk),
+		.reset(reset),
+		.OUT(out)
+	);
+
+	initial begin
+        $dumpfile("tb_rvmyth.vcd");
+        $dumpvars(0,tb_rvmyth);
+        clk = 1;
+        reset = 0;
+        #2 reset = 1;
+	#10 reset = 0;
+        #2000 $finish;
+        end
+        always #1 clk = ~clk;
+
+endmodule
 ```
 
->**Ensure sp_env is activated
->
->To activate:
->
->source sp_env/bin/activate
->
->deactivate #To deactivate
-### Convert TL-Verilog → Verilog
+**Synthesis**
 
 ```bash
-sandpiper-saas -i ./src/module/*.tlv -o rvmyth.v --bestsv --noline -p verilog --outdir ./src/module/
+vim tb_rvmyth.v   # Paste the testbench code
+iverilog -o /home/meena/VLSI/VSDBabySoC/output/rvmyth/rvmyth.out -DPRE_SYNTH_SIM \
+-I /home/meena/VLSI/VSDBabySoC/src/include -I /home/meena/VLSI/VSDBabySoC/src/module \
+/home/meena/VLSI/VSDBabySoC/src/module/clk_gate.v \
+/home/meena/VLSI/VSDBabySoC/src/module/rvmyth.v \
+/home/meena/VLSI/VSDBabySoC/src/module/tb_rvmyth.v
+vvp /home/meena/VLSI/VSDBabySoC/output/rvmyth/rvmyth.out
 ```
-![conversion](./Images/conversion.png)
 
-✅ Produces `rvmyth.v` and `rvmyth_gen.v`.
+**Waveform**
 
+![rvmyth_wave](./Images/rvmyth_wave.png)
 
 ---
 
-### Compile design with Icarus Verilog
+## avsddac.v
 
-```bash
-mkdir -p output/pre_synth_sim
-iverilog -o /home/meena/VLSI/VSDBabySoC/output/pre_synth_sim/pre_synth_sim.out -DPRE_SYNTH_SIM -I /home/meena/VLSI/VSDBabySoC/src/include -I /home/meena/VLSI/VSDBabySoC/src/module /home/meena/VLSI/VSDBabySoC/src/module/testbench.v
+**Testbench**
+Make a new file in `/src/module` named `tb_avsddac.v`
 
+> Follow these steps:
+>
+> ```bash
+> vim tb_avsddac.v
+> # press i to get into insert mode
+> # paste the testbench code and click 'Enter'
+> :wq  # to write and save
+> ```
+
+**Testbench Code:**
+```
+`timescale 1ns / 1ps
+
+module tb_avsddac;
+reg EN;
+reg real VREFH, VREFL;
+reg [9:0] D;
+wire real OUT;
+
+avsddac uut ( .OUT(OUT), .D(D), .VREFH(VREFH), .VREFL(VREFL) );
+
+initial begin
+
+   EN = 1'b0;
+#5 EN = 1'b1;
+
+end
+initial begin
+   VREFH = 3.3;
+   VREFL = 0.0;
+end
+
+initial begin 
+
+#10  D = 10'h3FA;
+#10  D = 10'h3FB;
+#10  D = 10'h3FC;
+#10  D = 10'h3FD;
+#10  D = 10'h3FE;
+#10  D = 10'h3FF;
+
+
+end
+
+initial begin
+        $dumpfile("tb_avsddac.vcd");
+        $dumpvars(0,tb_avsddac);
+        //clk = 1;
+        //reset = 0;
+        //#2 reset = 1;
+	//#10 reset = 0;
+        #300 $finish;
+        end
+        
+endmodule
 ```
 
-### Run simulation & view waveforms
+**Synthesis**
 
 ```bash
-./pre_synth_sim.out
-gtkwave pre_synth_sim.vcd
+vim tb_avsddac.v   # Paste the testbench code
+iverilog -o /home/meena/VLSI/VSDBabySoC/output/avsddac/avsddac.out -DPRE_SYNTH_SIM \
+-I /home/meena/VLSI/VSDBabySoC/src/include -I /home/meena/VLSI/VSDBabySoC/src/module \
+/home/meena/VLSI/VSDBabySoC/src/module/clk_gate.v \
+/home/meena/VLSI/VSDBabySoC/src/module/avsddac.v \
+/home/meena/VLSI/VSDBabySoC/src/module/tb_avsddac.v
+vvp /home/meena/VLSI/VSDBabySoC/output/avsddac/avsddac.out
 ```
 
-**Waveform:**
+### Waveform
 
-![pre_synth_wave](./Images/pre_synth_wave.png)
-
->In this picture we can see the following signals:
->
->CLK: This is the input CLK signal of the RVMYTH core. This signal comes from the PLL, originally.
->
->reset: This is the input reset signal of the RVMYTH core. This signal comes from an external source, originally.
->
->OUT: This is the output OUT signal of the VSDBabySoC module. This signal comes from the DAC (due to simulation restrictions it behaves like a digital signal which is incorrect), originally.
->
->RV_TO_DAC[9:0]: This is the 10-bit output [9:0] OUT port of the RVMYTH core. This port comes from the RVMYTH register #17, originally.
->
->OUT: This is a real datatype wire which can simulate analog values. It is the output wire real OUT signal of the DAC module. This signal comes from the DAC, originally.
+![avsddac_wave](./Images/avsddac_wave.png)
 
 ---
 
-## 4.RTL Simulation Modules
+## avsdpll.v
 
-### avsdpll.v
+**Testbench**
+Make a new file in `/src/module` named `tb_avsdpll.v`
 
-**Testbench**  
+> Follow these steps:
+>
+> ```bash
+> vim tb_avsdpll.v
+> # press i to get into insert mode
+> # paste the testbench code and click 'Enter'
+> :wq  # to write and save
+> ```
 
-Make a new file in /src/module named tb_avsddac.v  
->Follow these steps: 
->vim tb_avspll.v  
-> #press i to get into insert mode  
->Paste the code and click 'Enter'  
->:wq #To write and save
+**Testbench code**  
+```
+module tb_pll();
+   
+    
+  reg VSSD;
+  reg EN_VCO;
+ 
+  reg VSSA;
+  reg VDDD;
+  reg VDDA;
+  reg VCO_IN;
+  reg REF;
+  reg c = 1'b1;
+  wire CLK;
 
-![Reference-Testbench](#https://github.com/vsdip/rvmyth_avsdpll_interface/blob/main/verilog/pll_tb.v)
 
-**Synthesis**  
+ avsdpll dut(.CLK(CLK), .VCO_IN(VCO_IN), .ENb_CP(c),.ENb_VCO(EN_VCO), .REF(REF));
+  
+  initial
+   begin
+   {REF,EN_VCO}=0;
+   VCO_IN = 1'b0 ;
+   VDDA = 1.8;
+   VDDD = 1.8;
+   VSSA = 0;
+   VSSD = 0;
+   
+   end
+   
+   initial
+ begin
+    $dumpfile("tb_pll.vcd");
+    $dumpvars(0,tb_pll);
+ end
+ 
+   initial
+    begin
+   // repeat(2)
+  //begin
+    // EN_VCO = 1;
+    //#100 REF = ~REF;
+     
+    //end
+ //repeat(2)
+  //begin
+    // EN_VCO = 1;
+     //#50 REF = ~REF;
 
+     //end
+
+    repeat(400)
+  begin
+     EN_VCO = 1;
+     #100 REF = ~REF;
+     #(83.33/2)  VCO_IN = ~VCO_IN;
+     
+     end
+     
+      $finish;
+    end
+endmodule
 ```
 
-### avsdpll.v
-vim tb_rvmyth.v
- iverilog -o /home/meena/VLSI/VSDBabySoC/output/rvymth/rvmyth.out -DPRE_SYNTH_SIM -I /home/meena/VLSI/VSDBabySoC/src/include -I /home/meena/VLSI/VSDBabySoC/src/module /home/meena/VLSI/VSDBabySoC/src/module/clk_gate.v /home/meena/VLSI/VSDBabySoC/src/module/rvmyth.v /home/meena/VLSI/VSDBabySoC/src/module/tb_rvmyth.v
+**Synthesis**
 
-vvp /home/meena/VLSI/VSDBabySoC/output/rvymth/rvmyth.out
+```bash
+vim tb_avsdpll.v   # Paste the testbench code
+iverilog -o /home/meena/VLSI/VSDBabySoC/output/avsdpll/avsdpll.out -DPRE_SYNTH_SIM \
+-I /home/meena/VLSI/VSDBabySoC/src/include -I /home/meena/VLSI/VSDBabySoC/src/module \
+/home/meena/VLSI/VSDBabySoC/src/module/clk_gate.v \
+/home/meena/VLSI/VSDBabySoC/src/module/avsdpll.v \
+/home/meena/VLSI/VSDBabySoC/src/module/tb_avsdpll.v
+vvp /home/meena/VLSI/VSDBabySoC/output/avsdpll/avsdpll.out
+```
+
+### Waveform
+
+![avsdpll_wave](./Images/avsdpll_wave.png)
+
+---
+
+## 4.Post-Synthesis Simulation of BabySoC
+
+Thes files need to be present in the working directory of `yosys` in order to ensure error free synthesis. This is done using the following commands,
+
+```bash
+cd ~/Documents/Verilog/Labs/VSDBabySoC
+cp -r src/include/sp_verilog.vh .
+cp -r src/include/sandpiper.vh .
+cp -r src/include/sandpiper_gen.vh .
+```
+
+Now inside the `../VSDBabySoC` folder, run `yosys`.
+
+```bash
+yosys
+```
+
+In `yosys`, perform the following commands to read the required verilog files.
+
+```bash
+read_verilog src/module/vsdbabysoc.v 
+read_verilog -I /home/meena/VLSI/VSDBabySoC/src/include/ /home/meena/VLSI/VSDBabySoC/src/module/rvmyth.v
+read_verilog -I /home/meena/VLSI/VSDBabySoC/src/include/ /home/meena/VLSI/VSDBabySoC/src/module/clk_gate.v
+```
+
+Then, the liberty files,
+
+```bash
+read_liberty -lib /home/meena/VLSI/VSDBabySoC/src/lib/avsdpll.lib 
+read_liberty -lib /home/meena/VLSI/VSDBabySoC/src/lib/avsddac.lib 
+read_liberty -lib /home/meena/VLSI/VSDBabySoC/src/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+```
+
+Synthesize `vsdbabysoc`, specifying it as the top module,
+
+```bash
+synth -top vsdbabysoc
+```
+
+Convert D Flip-Flops into equivalent Standard Cell instances by,
+
+```bash
+dfflibmap -liberty /home/meena/VLSI/VSDBabySoC/src/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+```
+
+Perform Optimization and Technology mapping using the following commands,
+
+```bash
+opt
+abc -liberty /home/meena/VLSI/VSDBabySoC/src/lib/sky130_fd_sc_hd__tt_025C_1v80.lib -script +strash;scorr;ifraig;retime;{D};strash;dch,-f;map,-M,1,{D}
+```
+
+| Command        | Purpose                                                                     |
+| -------------- | --------------------------------------------------------------------------- |
+| `strash`       | Structural hashing — converts logic network to an AIG (And-Inverter Graph). |
+| `scorr`        | Sequential redundancy removal — detects equivalent registers.               |
+| `ifraig`       | Combinational equivalence simplification.                                   |
+| `retime`       | Moves flip-flops for timing optimization.                                   |
+| `{D}`          | Placeholder or marker for design partition (used internally by Yosys/ABC).  |
+| `strash`       | Re-run structural hashing after retiming.                                   |
+| `dch,-f`       | Performs combinational optimization (don’t-care-based).                     |
+| `map,-M,1,{D}` | Maps the logic to gates in the provided `.lib` standard cell library.       |
 
 
+Then, conduct final optimisations and clean-up through,
+
+```bash
+flatten
+setundef -zero
+clean -purge
+rename -enumerate
+```
+
+Then finally write the netlist using,
+
+```bash
+write_verilog -noattr ~/Documents/Verilog/Labs/vsdbabysoc_synth.v
+```
 
 
+**LOG:**
+=== clk_gate ===
+
+   Number of wires:                  5
+   Number of wire bits:              5
+   Number of public wires:           5
+   Number of public wire bits:       5
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== rvmyth ===
+
+   Number of wires:               4663
+   Number of wire bits:           8290
+   Number of public wires:         267
+   Number of public wire bits:    3894
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:               6849
+     $_ANDNOT_                    1180
+     $_AND_                         59
+     $_AOI3_                       104
+     $_AOI4_                       153
+     $_DFF_P_                     1273
+     $_MUX_                       1456
+     $_NAND_                        84
+     $_NOR_                         92
+     $_NOT_                        964
+     $_OAI3_                       168
+     $_OAI4_                       387
+     $_ORNOT_                       62
+     $_OR_                         666
+     $_XNOR_                        80
+     $_XOR_                        114
+     clk_gate                        7
+
+=== vsdbabysoc ===
+
+   Number of wires:                  9
+   Number of wire bits:             18
+   Number of public wires:           9
+   Number of public wire bits:      18
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  3
+     avsddac                         1
+     avsdpll                         1
+     rvmyth                          1
+
+=== design hierarchy ===
+
+   vsdbabysoc                        1
+     rvmyth                          1
+       clk_gate                      7
+
+   Number of wires:               4707
+   Number of wire bits:           8343
+   Number of public wires:         311
+   Number of public wire bits:    3947
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:               6844
+     $_ANDNOT_                    1180
+     $_AND_                         59
+     $_AOI3_                       104
+     $_AOI4_                       153
+     $_DFF_P_                     1273
+     $_MUX_                       1456
+     $_NAND_                        84
+     $_NOR_                         92
+     $_NOT_                        964
+     $_OAI3_                       168
+     $_OAI4_                       387
+     $_ORNOT_                       62
+     $_OR_                         666
+     $_XNOR_                        80
+     $_XOR_                        114
+     avsddac                         1
+     avsdpll                         1
+```
+
+Compilation of the netlist with the testbench must be done, of course through `iverilog` using the following command,
+
+```bash
+iverilog -o ~/Documents/Verilog/Labs/vsdbabysoc_synth.vvp -DPOST_SYNTH_SIM -DFUNCTIONAL -DUNIT_DELAY=#1 -I ~/Documents/Verilog/Labs/VSDBabySoC/src/include -I ~/Documents/Verilog/Labs/VSDBabySoC/src/module -I  ~/Documents/Verilog/Labs/VSDBabySoC/src/gls_model ~/Documents/Verilog/Labs/VSDBabySoC/src/module/testbench.v
+```
+
+> [!Note]
+> `-DPOST_SYNTH_SIM` | Defines the macro `POST_SYNTH_SIM` to enable post-synthesis simulation mode. \
+> `-DFUNCTIONAL`     | Defines the macro `FUNCTIONAL` to select functional simulation mode. \      
+> `-DUNIT_DELAY=#1`  | Defines the macro `UNIT_DELAY` with value `#1` for unit delay parameterization in simulation. 
+
+
+Then, to view the waveform,
+
+```bash
+vvp vsdbabysoc_synth.vvp
+gtkwave post_synth_sim.vcd 
+```
+![post_synth_sim_wave](./Images/post_synth_wave.png)
+
+---
+
+## 5.Comparison
+
+![comparison](./Images/comparison.png)
+
+**✅ There is no mismatch between pre-synthesis and post-synthesis simulation**
+
+---
 
 ## 5. Summary
 
