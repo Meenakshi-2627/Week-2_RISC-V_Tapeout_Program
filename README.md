@@ -100,7 +100,7 @@ The testbench:
 
 ---
 
-## 3. Pre-synthesis Simulation of VSDBabySoC
+## 3. Pre-synthesis Simulation of VSDBabySoC(rvmyth.tlv)
 
 ### Install dependencies
 
@@ -110,18 +110,21 @@ python3 -m venv sp_env
 source sp_env/bin/activate
 pip3 install pyyaml click sandpiper-saas
 ```
+
 >**Ensure sp_env is activated
+>
 >To activate:
+>
 >source sp_env/bin/activate
+>
 >deactivate #To deactivate
 ### Convert TL-Verilog → Verilog
 
 ```bash
-python3 -m sandpiper -i ~/Documents/Verilog/Labs/VSDBabySoC/src/module/rvmyth.tlv \
--o rvmyth.v --bestsv --noline -p verilog \
---outdir ~/Documents/Verilog/Labs/VSDBabySoC/src/module
+sandpiper-saas -i ./src/module/*.tlv -o rvmyth.v --bestsv --noline -p verilog --outdir ./src/module/
 ```
 ![conversion](./Images/conversion.png)
+
 ✅ Produces `rvmyth.v` and `rvmyth_gen.v`.
 
 
@@ -130,12 +133,10 @@ python3 -m sandpiper -i ~/Documents/Verilog/Labs/VSDBabySoC/src/module/rvmyth.tl
 ### Compile design with Icarus Verilog
 
 ```bash
-
+mkdir -p output/pre_synth_sim
 iverilog -o /home/meena/VLSI/VSDBabySoC/output/pre_synth_sim/pre_synth_sim.out -DPRE_SYNTH_SIM -I /home/meena/VLSI/VSDBabySoC/src/include -I /home/meena/VLSI/VSDBabySoC/src/module /home/meena/VLSI/VSDBabySoC/src/module/testbench.v
 
 ```
-
----
 
 ### Run simulation & view waveforms
 
@@ -143,9 +144,6 @@ iverilog -o /home/meena/VLSI/VSDBabySoC/output/pre_synth_sim/pre_synth_sim.out -
 ./pre_synth_sim.out
 gtkwave pre_synth_sim.vcd
 ```
-
-Workflow:
-
 
 **Waveform:**
 
@@ -164,6 +162,27 @@ Workflow:
 >OUT: This is a real datatype wire which can simulate analog values. It is the output wire real OUT signal of the DAC module. This signal comes from the DAC, originally.
 
 ---
+
+## 4.RTL Simulation Modules
+
+### avsdpll.v
+
+**Testbench**  
+
+Make a new file in /src/module named tb_avsddac.v  
+>Follow these steps: 
+>vim tb_avspll.v  
+> #press i to get into insert mode  
+>Paste the code and click 'Enter'  
+>:wq #To write and save
+
+![Reference-Testbench](#https://github.com/vsdip/rvmyth_avsdpll_interface/blob/main/verilog/pll_tb.v)
+
+**Synthesis**  
+
+```
+
+
 
 ## 5. Summary
 
