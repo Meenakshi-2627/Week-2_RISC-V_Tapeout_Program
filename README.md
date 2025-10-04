@@ -182,6 +182,14 @@ Make a new file in /src/module named tb_avsddac.v
 
 ```
 
+### avsdpll.v
+vim tb_rvmyth.v
+ iverilog -o /home/meena/VLSI/VSDBabySoC/output/rvymth/rvmyth.out -DPRE_SYNTH_SIM -I /home/meena/VLSI/VSDBabySoC/src/include -I /home/meena/VLSI/VSDBabySoC/src/module /home/meena/VLSI/VSDBabySoC/src/module/clk_gate.v /home/meena/VLSI/VSDBabySoC/src/module/rvmyth.v /home/meena/VLSI/VSDBabySoC/src/module/tb_rvmyth.v
+
+vvp /home/meena/VLSI/VSDBabySoC/output/rvymth/rvmyth.out
+
+
+
 
 
 ## 5. Summary
