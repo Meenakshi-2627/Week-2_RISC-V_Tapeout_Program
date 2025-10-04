@@ -69,7 +69,7 @@ In this picture we can see the following signals:
 >To view the output waveform in analog , right click `OUT`-> `Data format` -> `Analog` -> `Step`
 
 **Reference**  
-![pre_synth_sim_wave1](./Images/pre_synth_sim_wave1.png)
+![pre_synth_wave1](./Images/pre_synth_wave1.png)
 
 ---
 
